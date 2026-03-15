@@ -12,12 +12,13 @@ function BlogDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    const postId: string = id
 
     let cancelled = false
 
     async function load() {
       try {
-        const data = await getPost(id)
+        const data = await getPost(postId)
         if (!cancelled) {
           setPost(data)
         }
