@@ -1,0 +1,11 @@
+{
+  "id": "1",
+  "title": "Building this portfolio",
+  "summary": "How I put together this minimal, focused engineering portfolio site.",
+  "content": "<p>This site is built with React and Vite, with a focus on clean typography, a calm palette, and just enough structure to be useful.</p><p>The blog is a small extension on top of that: it reuses the same cards, sections, and layout so everything feels consistent.</p>",
+  "createdAt": "2026-03-25T14:46:59.280Z",
+  "tags": [
+    "portfolio",
+    "react"
+  ]
+}

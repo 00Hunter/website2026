@@ -1,0 +1,11 @@
+{
+  "id": "2",
+  "title": "Notes on backend APIs",
+  "summary": "Some quick thoughts on designing APIs that stay maintainable over time.",
+  "content": "<p>Good APIs are boring in the best way: predictable URLs, clear error messages, and stable contracts.</p><ul><li>Keep the surface area small.</li><li>Prefer explicit fields over magic.</li><li>Write down the behavior in plain language.</li></ul>",
+  "createdAt": "2026-03-25T14:46:59.280Z",
+  "tags": [
+    "backend",
+    "api-design"
+  ]
+}

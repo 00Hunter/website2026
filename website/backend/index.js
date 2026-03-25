@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs/promises');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -14,29 +16,83 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Simple in-memory data store for demo purposes
-let nextPostId = 3;
+const POSTS_DIR = path.join(__dirname, 'data', 'posts');
 
-const posts = [
-  {
-    id: '1',
-    title: 'Building this portfolio',
-    summary: 'How I put together this minimal, focused engineering portfolio site.',
-    content:
-      '<p>This site is built with React and Vite, with a focus on clean typography, a calm palette, and just enough structure to be useful.</p><p>The blog is a small extension on top of that: it reuses the same cards, sections, and layout so everything feels consistent.</p>',
-    createdAt: new Date().toISOString(),
-    tags: ['portfolio', 'react'],
-  },
-  {
-    id: '2',
-    title: 'Notes on backend APIs',
-    summary: 'Some quick thoughts on designing APIs that stay maintainable over time.',
-    content:
-      '<p>Good APIs are boring in the best way: predictable URLs, clear error messages, and stable contracts.</p><ul><li>Keep the surface area small.</li><li>Prefer explicit fields over magic.</li><li>Write down the behavior in plain language.</li></ul>',
-    createdAt: new Date().toISOString(),
-    tags: ['backend', 'api-design'],
-  },
-];
+let posts = [];
+
+function generatePostId() {
+  // URL-safe id; reduces collision risk when multiple posts are created quickly.
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function writePostFile(post) {
+  await fs.mkdir(POSTS_DIR, { recursive: true });
+
+  const finalPath = path.join(POSTS_DIR, `${post.id}.json`);
+  const tmpPath = path.join(
+    POSTS_DIR,
+    `${post.id}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+
+  // Atomic-ish write: write temp file, then rename into place.
+  await fs.writeFile(tmpPath, JSON.stringify(post, null, 2), 'utf8');
+  await fs.rename(tmpPath, finalPath);
+}
+
+async function loadPostsFromDisk() {
+  await fs.mkdir(POSTS_DIR, { recursive: true });
+
+  const entries = await fs.readdir(POSTS_DIR);
+  const jsonFiles = entries.filter((f) => f.endsWith('.json'));
+
+  if (jsonFiles.length === 0) {
+    // Seed initial posts the first time.
+    const seedPosts = [
+      {
+        id: '1',
+        title: 'Building this portfolio',
+        summary: 'How I put together this minimal, focused engineering portfolio site.',
+        content:
+          '<p>This site is built with React and Vite, with a focus on clean typography, a calm palette, and just enough structure to be useful.</p><p>The blog is a small extension on top of that: it reuses the same cards, sections, and layout so everything feels consistent.</p>',
+        createdAt: new Date().toISOString(),
+        tags: ['portfolio', 'react'],
+      },
+      {
+        id: '2',
+        title: 'Notes on backend APIs',
+        summary: 'Some quick thoughts on designing APIs that stay maintainable over time.',
+        content:
+          '<p>Good APIs are boring in the best way: predictable URLs, clear error messages, and stable contracts.</p><ul><li>Keep the surface area small.</li><li>Prefer explicit fields over magic.</li><li>Write down the behavior in plain language.</li></ul>',
+        createdAt: new Date().toISOString(),
+        tags: ['backend', 'api-design'],
+      },
+    ];
+
+    posts = seedPosts.slice();
+    // Store each seeded post as its own file.
+    for (const post of seedPosts) {
+      await writePostFile(post);
+    }
+  } else {
+    const loaded = [];
+    for (const fileName of jsonFiles) {
+      const raw = await fs.readFile(path.join(POSTS_DIR, fileName), 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed.id && parsed.title && parsed.content) {
+        loaded.push(parsed);
+      }
+    }
+
+    posts = loaded;
+  }
+
+  // Ensure latest posts show first.
+  posts.sort((a, b) => {
+    const at = Date.parse(a.createdAt || '') || 0;
+    const bt = Date.parse(b.createdAt || '') || 0;
+    return bt - at;
+  });
+}
 
 // For this demo we use a single hard-coded user
 const DEMO_USER = {
@@ -81,27 +137,6 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body || {};
-
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
-  }
-
-  await ensureDemoUser();
-
-  if (email !== DEMO_USER.email) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const valid = await bcrypt.compare(password, DEMO_USER.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ message: 'Invalid credentials' });
-  }
-
-  const token = generateToken(DEMO_USER);
-  return res.json({ token });
-});
 
 app.get('/api/posts', (req, res) => {
   res.json(posts);
@@ -116,7 +151,7 @@ app.get('/api/posts/:id', (req, res) => {
   return res.json(post);
 });
 
-app.post('/api/posts', authMiddleware, (req, res) => {
+app.post('/api/posts', async (req, res, next) => {
   const { title, summary, content, tags } = req.body || {};
 
   if (!title || !summary || !content) {
@@ -124,7 +159,7 @@ app.post('/api/posts', authMiddleware, (req, res) => {
   }
 
   const newPost = {
-    id: String(nextPostId++),
+    id: generatePostId(),
     title,
     summary,
     content,
@@ -132,12 +167,16 @@ app.post('/api/posts', authMiddleware, (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  posts.unshift(newPost);
-
-  return res.status(201).json(newPost);
+  try {
+    await writePostFile(newPost);
+    posts.unshift(newPost);
+    return res.status(201).json(newPost);
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.put('/api/posts/:id', authMiddleware, (req, res) => {
+app.put('/api/posts/:id', async (req, res, next) => {
   const { id } = req.params;
   const { title, summary, content, tags } = req.body || {};
 
@@ -156,9 +195,13 @@ app.put('/api/posts/:id', authMiddleware, (req, res) => {
     tags: Array.isArray(tags) ? tags : existing.tags,
   };
 
-  posts[postIndex] = updated;
-
-  return res.json(updated);
+  try {
+    await writePostFile(updated);
+    posts[postIndex] = updated;
+    return res.json(updated);
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.use((req, res) => {
@@ -170,7 +213,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend API listening on http://localhost:${PORT}`);
-});
+loadPostsFromDisk()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Backend API listening on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to start backend:', err);
+    process.exit(1);
+  });
 
