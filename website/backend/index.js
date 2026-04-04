@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || 'https://prajawal.in',
 }));
 app.use(express.json());
 
@@ -95,13 +95,6 @@ async function loadPostsFromDisk() {
 }
 
 // For this demo we use a single hard-coded user
-const DEMO_USER = {
-  id: 'user-1',
-  email: process.env.DEMO_USER_EMAIL || 'prajawal@example.com',
-  passwordHash: null,
-};
-
-const DEMO_USER_PASSWORD = process.env.DEMO_USER_PASSWORD || 'password123';
 
 async function ensureDemoUser() {
   if (!DEMO_USER.passwordHash) {
@@ -216,7 +209,7 @@ app.use((err, req, res, next) => {
 loadPostsFromDisk()
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`Backend API listening on http://localhost:${PORT}`);
+      console.log(`Backend API listening on port ${PORT}`);
     });
   })
   .catch((err) => {
