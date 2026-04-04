@@ -137,6 +137,32 @@ function PortfolioPage() {
         <h2>Projects</h2>
         <div className="grid">
           <article className="card">
+            <h3>AI Portfolio News Intelligence Platform</h3>
+            <p>
+              Real-time news ingestion pipeline built with Spring Boot and MySQL, applying LLM-based summarization and
+              event detection to cluster stock-level news for user portfolios.
+            </p>
+            <p>
+              NLP sentiment analysis and a scheduled notification pipeline that delivers daily portfolio summaries and
+              event-driven alerts via background jobs.
+            </p>
+            <p className="meta">Tech: Spring Boot, MySQL, LLMs, NLP, sentiment analysis</p>
+          </article>
+
+          <article className="card">
+            <h3>AI-Powered IT Support Assistant</h3>
+            <p>
+              LLM-driven assistant using the OpenAI API that auto-classifies support requests and creates tickets;
+              integrated with helpdesk workflows end to end.
+            </p>
+            <p>
+              Extended Trudesk with custom routing modules and API integration so classified requests land in the right
+              queues with minimal manual triage.
+            </p>
+            <p className="meta">Tech: OpenAI API, Python, FastAPI, Trudesk</p>
+          </article>
+
+          <article className="card">
             <h3>CheckPoint · Location bookmarking app</h3>
             <p>
               Full‑stack location bookmarking application that lets users save, revisit, and navigate to places using
@@ -147,23 +173,6 @@ function PortfolioPage() {
               listing, and managing saved locations, backed by Google Maps for geolocation and navigation.
             </p>
             <p className="meta">Tech: React Native, Node.js, Express, Google Maps APIs</p>
-          </article>
-
-          <article className="card">
-            <h3>Project name</h3>
-            <p>
-              One or two sentences describing what this project does, who it&apos;s for, and what you focused on
-              technically.
-            </p>
-            <p className="meta">Tech: React, TypeScript, Node.js</p>
-          </article>
-
-          <article className="card">
-            <h3>Another project</h3>
-            <p>
-              Another short description, ideally highlighting a different set of skills or responsibilities.
-            </p>
-            <p className="meta">Tech: Python, REST APIs, PostgreSQL</p>
           </article>
         </div>
       </section>
